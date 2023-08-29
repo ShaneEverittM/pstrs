@@ -2,6 +2,6 @@ DROP TABLE IF EXISTS pastes;
 
 CREATE TABLE pastes
 (
-    id      serial PRIMARY KEY,
+    id      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     content TEXT NOT NULL
 );

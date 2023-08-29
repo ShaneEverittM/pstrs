@@ -1,4 +1,5 @@
 use axum::extract::{Path, State};
+use uuid::Uuid;
 
 use crate::{app::App, error::Result};
 
@@ -17,7 +18,7 @@ pub async fn index() -> &'static str {
     "
 }
 
-pub async fn retrieve(Path(id): Path<i32>, State(state): State<App>) -> Result<String> {
+pub async fn retrieve(Path(id): Path<Uuid>, State(state): State<App>) -> Result<String> {
     let paste = sqlx::query_as!(
         crate::models::Paste,
         "SELECT id, content FROM pastes WHERE id = $1",

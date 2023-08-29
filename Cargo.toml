@@ -8,8 +8,9 @@ anyhow = "1.0.74"
 axum = "0.6.18"
 futures-util = "0.3.28"
 serde = "1.0.183"
-shuttle-axum = "0.24.0"
-shuttle-runtime = "0.24.0"
-shuttle-shared-db = { version = "0.24.0", features = ["postgres", "postgres-rustls"] }
-sqlx = { version = "0.7.1", features = ["runtime-tokio-rustls", "postgres"] }
+shuttle-axum = "0.25.0"
+shuttle-runtime = "0.25.0"
+shuttle-shared-db = { version = "0.25.0", features = ["postgres", "postgres-rustls"] }
+sqlx = { version = "0.7.1", features = ["runtime-tokio-rustls", "postgres", "uuid"] }
 tokio = "1.28.2"
+uuid = { version = "1.4.1", features = ["serde", "v4", "fast-rng"] }
