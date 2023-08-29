@@ -1,12 +1,7 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Deserialize)]
-pub struct TodoNew {
-    pub note: String,
-}
+use serde::Serialize;
 
 #[derive(Serialize)]
-pub struct Todo {
+pub struct Paste {
     pub id: i32,
-    pub note: String,
+    pub content: String,
 }

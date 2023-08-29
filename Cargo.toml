@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.74"
 axum = "0.6.18"
+futures-util = "0.3.28"
 serde = "1.0.183"
 shuttle-axum = "0.24.0"
 shuttle-runtime = "0.24.0"

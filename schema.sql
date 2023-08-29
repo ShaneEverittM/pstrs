@@ -1,7 +1,7 @@
-DROP TABLE IF EXISTS todos;
+DROP TABLE IF EXISTS pastes;
 
-CREATE TABLE todos
+CREATE TABLE pastes
 (
-    id   serial PRIMARY KEY,
-    note TEXT NOT NULL
+    id      serial PRIMARY KEY,
+    content TEXT NOT NULL
 );

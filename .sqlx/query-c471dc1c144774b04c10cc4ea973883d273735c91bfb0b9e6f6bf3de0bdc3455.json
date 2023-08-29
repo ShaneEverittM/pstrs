@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO todos(note) VALUES ($1) RETURNING id, note",
+  "query": "INSERT INTO pastes(content) VALUES ($1) RETURNING id, content",
   "describe": {
     "columns": [
       {
@@ -10,7 +10,7 @@
       },
       {
         "ordinal": 1,
-        "name": "note",
+        "name": "content",
         "type_info": "Text"
       }
     ],
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "aadec8c5a9faa3ddeb21c2b5b822fec148139dcbe1a44d55182565518a7c2e1a"
+  "hash": "c471dc1c144774b04c10cc4ea973883d273735c91bfb0b9e6f6bf3de0bdc3455"
 }
