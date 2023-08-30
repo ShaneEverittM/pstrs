@@ -19,9 +19,9 @@ impl IntoResponse for AppError {
     }
 }
 
-// This enables using `?` on functions that return `Result<_, anyhow::Error>` (or any thing
-// convertable to `anyhow::Error` for that matter) to turn them into
-// `Result<_, AppError>`.
+// This enables using `?` on functions that return `Result<_, anyhow::Error>`
+// (or any thing convertable to `anyhow::Error` for that matter) to turn them
+// into `Result<_, AppError>`.
 impl<E> From<E> for AppError
 where
     E: Into<anyhow::Error>,
