@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.74"
+async-trait = "0.1.73"
 axum = "0.6.18"
 futures-util = "0.3.28"
 hyper = "0.14.27"
@@ -15,3 +16,6 @@ shuttle-shared-db = { version = "0.25.0", features = ["postgres", "postgres-rust
 sqlx = { version = "0.7.1", features = ["runtime-tokio-rustls", "postgres", "uuid"] }
 tokio = "1.28.2"
 uuid = { version = "1.4.1", features = ["serde", "v4", "fast-rng"] }
+
+[dev-dependencies]
+axum-test-helper = "0.3.0"

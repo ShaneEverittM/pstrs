@@ -1,14 +1,14 @@
 use axum::{
     extract::{Host, Path, State},
     http::Uri,
+    routing::{get, post},
+    Router,
 };
 use uuid::Uuid;
 
 use crate::{app::App, error::Result};
 
-/// Return the usage string for our web app.
-pub async fn index() -> &'static str {
-    "
+const USAGE: &str = "
     USAGE
 
       POST /
@@ -19,8 +19,10 @@ pub async fn index() -> &'static str {
       GET /<id>
 
           retrieves the content for the paste with id `<id>`
-    "
-}
+    ";
+
+/// Return the usage string for our web app.
+pub async fn index() -> &'static str { USAGE }
 
 /// Retrieve a paste by its UUID.
 ///
@@ -30,17 +32,7 @@ pub async fn retrieve(
     Path(id): Path<Uuid>,
     State(state): State<App>,
 ) -> Result<String> {
-    // Compile time checked query.
-    // Run `cargo sqlx prepare` to update checked queries.
-    let paste = sqlx::query_as!(
-        crate::models::Paste,
-        "SELECT id, content FROM pastes WHERE id = $1",
-        id
-    )
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(paste.content)
+    state.db.get_paste(id).await.map(|p| p.content)
 }
 
 /// Upload a paste.
@@ -52,19 +44,115 @@ pub async fn upload(
     Host(host): Host,
     body: String,
 ) -> Result<String> {
-    // Compile time checked query.
-    // Run `cargo sqlx prepare` to update checked queries.
-    let paste = sqlx::query_as!(
-        crate::models::Paste,
-        "INSERT INTO pastes(content) VALUES ($1) RETURNING id, content",
-        body
-    )
-    .fetch_one(&state.db)
-    .await?;
+    let paste = state.db.create_paste(body).await?;
 
     // Construct a complete URI to the paste,
     // so the user can easily copy and save it.
     let paste_uri = format!("https://{}/{}", host, paste.id).parse::<Uri>()?;
 
     Ok(paste_uri.to_string())
+}
+
+pub fn make_router() -> Router<App> {
+    Router::new()
+        .route("/", get(index))
+        .route("/", post(upload))
+        .route("/:id", get(retrieve))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, sync::Arc};
+
+    use async_trait::async_trait;
+    use axum::http::StatusCode;
+    use axum_test_helper::TestClient;
+    use tokio::sync::Mutex;
+
+    use crate::{db::PasteDatabase, models::Paste};
+
+    use super::*;
+
+    // Create Mock database type.
+    #[derive(Default)]
+    struct MockDb {
+        pub entries: Mutex<HashMap<Uuid, String>>,
+    }
+
+    // Make convenience methods for it.
+    impl MockDb {
+        pub fn arc() -> Arc<Self> { Arc::new(Self::default()) }
+    }
+
+    // Implement our database trait on it.
+    #[async_trait]
+    impl PasteDatabase for MockDb {
+        async fn get_paste(&self, id: Uuid) -> Result<Paste> {
+            let lock = self.entries.lock().await;
+            let paste = lock.get(&id).ok_or_else(|| anyhow::anyhow!("not found"))?;
+
+            Ok(Paste {
+                id,
+                content: paste.clone(),
+            })
+        }
+
+        async fn create_paste(&self, content: String) -> Result<Paste> {
+            let id = Uuid::new_v4();
+            let mut lock = self.entries.lock().await;
+            lock.insert(id, content.clone());
+            Ok(Paste { id, content })
+        }
+    }
+
+    // Extend app to have a mock method that uses the Mock database.
+    impl App {
+        pub fn mock() -> Self { Self { db: MockDb::arc() } }
+    }
+
+    // Get a test client suitable for use within tests,
+    // sans any infrastructural setup (Databases, services, etc.).
+    fn get_client() -> TestClient {
+        // Construct router with mock db.
+        let router = make_router().with_state(App::mock());
+
+        // Create test client to router.
+        TestClient::new(router)
+    }
+
+    #[tokio::test]
+    async fn test_index() -> Result<()> {
+        let client = get_client();
+
+        // Test that index succeeds.
+        let response = client.get("/").send().await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.text().await, USAGE);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_add_get() -> Result<()> {
+        let client = get_client();
+
+        // Create a paste to upload then retrieve.
+        let paste = "This is a paste!";
+
+        // Test that post succeeds.
+        let response = client.post("/").body(paste.to_string()).send().await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Get the paste id from the response.
+        let body = response.text().await;
+        let uri = body.parse::<Uri>()?;
+        let id = uri.path();
+
+        // Test that get succeeds.
+        let response = client.get(id).send().await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.text().await, paste);
+
+        Ok(())
+    }
 }

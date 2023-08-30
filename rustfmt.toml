@@ -1,2 +1,3 @@
 max_width = 88
 wrap_comments = true
+fn_single_line = true

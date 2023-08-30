@@ -1,4 +1,8 @@
-use sqlx::{Pool, Postgres};
+use std::sync::Arc;
+
+use sqlx::PgPool;
+
+use crate::db::PasteDatabase;
 
 /// Application state.
 ///
@@ -10,5 +14,10 @@ use sqlx::{Pool, Postgres};
 /// a Postgres database for you.
 #[derive(Clone)]
 pub struct App {
-    pub db: Pool<Postgres>,
+    pub db: Arc<dyn PasteDatabase + Send + Sync>,
+}
+
+impl App {
+    // Construct application state with a postgres connection pool.
+    pub fn postgres(pool: PgPool) -> Self { Self { db: Arc::new(pool) } }
 }

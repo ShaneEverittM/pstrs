@@ -6,6 +6,7 @@ use axum::{
 pub type Result<T> = anyhow::Result<T, AppError>;
 
 // Make our own error that wraps `anyhow::Error`.
+#[derive(Debug)]
 pub struct AppError(anyhow::Error);
 
 // Tell axum how to convert `AppError` into a response.
@@ -26,7 +27,5 @@ impl<E> From<E> for AppError
 where
     E: Into<anyhow::Error>,
 {
-    fn from(err: E) -> Self {
-        Self(err.into())
-    }
+    fn from(err: E) -> Self { Self(err.into()) }
 }
