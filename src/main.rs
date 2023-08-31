@@ -3,9 +3,8 @@ use shuttle_shared_db::Postgres;
 use sqlx::PgPool;
 
 mod app;
-mod db;
 mod error;
-mod models;
+mod paste;
 mod routes;
 
 #[shuttle_runtime::main]
