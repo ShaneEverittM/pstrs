@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::db::PasteDatabase;
+use crate::paste::PasteStore;
 
 /// Application state.
 ///
@@ -14,7 +14,7 @@ use crate::db::PasteDatabase;
 /// a Postgres database for you.
 #[derive(Clone)]
 pub struct App {
-    pub db: Arc<dyn PasteDatabase + Send + Sync>,
+    pub db: Arc<dyn PasteStore>,
 }
 
 impl App {
