@@ -1,3 +1,33 @@
+# Experts have found that "90-ish" is a good target
+# that balances readability and density. 88 is 10% more than
+# the classic 80.
 max_width = 88
+
+# Helps a bit with doc comments.
 wrap_comments = true
+
+# Functions that are just a single expression can
+# be written on a single line.
 fn_single_line = true
+
+# These three handle enforcing import consistency.
+reorder_imports = true
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+
+# Make sure types, constants, and macros come before methods in
+# impl blocks.
+reorder_impl_items = true
+
+# Field init shorthand is nice and concise.
+use_field_init_shorthand = true
+
+# Return without semicolons is wierd.
+trailing_semicolon = true
+
+# Why not.
+format_code_in_doc_comments = true
+
+# Should help.
+format_macro_matchers = true
+format_macro_bodies = true

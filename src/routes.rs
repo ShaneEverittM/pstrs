@@ -69,24 +69,23 @@ mod tests {
     use axum_test_helper::TestClient;
     use tokio::sync::Mutex;
 
-    use crate::{db::PasteDatabase, models::Paste};
-
     use super::*;
+    use crate::paste::{Paste, PasteStore};
 
     // Create Mock database type.
     #[derive(Default)]
-    struct MockDb {
+    struct MockPasteStore {
         pub entries: Mutex<HashMap<Uuid, String>>,
     }
 
     // Make convenience methods for it.
-    impl MockDb {
+    impl MockPasteStore {
         pub fn arc() -> Arc<Self> { Arc::new(Self::default()) }
     }
 
     // Implement our database trait on it.
     #[async_trait]
-    impl PasteDatabase for MockDb {
+    impl PasteStore for MockPasteStore {
         async fn get_paste(&self, id: Uuid) -> Result<Paste> {
             let lock = self.entries.lock().await;
             let paste = lock.get(&id).ok_or_else(|| anyhow::anyhow!("not found"))?;
@@ -107,7 +106,11 @@ mod tests {
 
     // Extend app to have a mock method that uses the Mock database.
     impl App {
-        pub fn mock() -> Self { Self { db: MockDb::arc() } }
+        pub fn mock() -> Self {
+            Self {
+                db: MockPasteStore::arc(),
+            }
+        }
     }
 
     // Get a test client suitable for use within tests,

@@ -3,9 +3,15 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
+/// A type alias for `Result<T, AppError>` that is suitable
+/// for use as the primary error type for this application.
+///
+/// It employs type erasure through `anyhow::Error` to allow
+/// for easy conversion from other error types, and since our error
+/// path isn't critical the performance overhead isn't a problem.
 pub type Result<T> = anyhow::Result<T, AppError>;
 
-// Make our own error that wraps `anyhow::Error`.
+/// A new type around `anyhow::Error` so that we can implement [IntoResponse].
 #[derive(Debug)]
 pub struct AppError(anyhow::Error);
 
