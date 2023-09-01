@@ -14,10 +14,10 @@ use crate::paste::PasteStore;
 /// a Postgres database for you.
 #[derive(Clone)]
 pub struct App {
-    pub db: Arc<dyn PasteStore>,
+    pub pastes: Arc<dyn PasteStore>,
 }
 
 impl App {
     // Construct application state with a postgres connection pool.
-    pub fn postgres(pool: PgPool) -> Self { Self { db: Arc::new(pool) } }
+    pub fn postgres(pool: PgPool) -> Self { Self { pastes: Arc::new(pool) } }
 }

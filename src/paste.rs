@@ -23,15 +23,18 @@ pub struct Paste {
 #[async_trait]
 pub trait PasteStore: Send + Sync {
     /// Get a paste by its ID.
-    async fn get_paste(&self, id: Uuid) -> Result<Option<Paste>>;
+    async fn get(&self, id: Uuid) -> Result<Option<Paste>>;
 
     /// Create a new paste.
-    async fn create_paste(&self, content: String) -> Result<Paste>;
+    async fn create(&self, content: String) -> Result<Paste>;
+
+    /// Remove a paste.
+    async fn remove(&self, id: Uuid) -> Result<Option<Paste>>;
 }
 
 #[async_trait]
 impl PasteStore for PgPool {
-    async fn get_paste(&self, id: Uuid) -> Result<Option<Paste>> {
+    async fn get(&self, id: Uuid) -> Result<Option<Paste>> {
         let paste = sqlx::query_as!(
             crate::paste::Paste,
             "SELECT id, content FROM pastes WHERE id = $1",
@@ -43,13 +46,25 @@ impl PasteStore for PgPool {
         Ok(paste)
     }
 
-    async fn create_paste(&self, content: String) -> Result<Paste> {
+    async fn create(&self, content: String) -> Result<Paste> {
         let paste = sqlx::query_as!(
             crate::paste::Paste,
             "INSERT INTO pastes(content) VALUES ($1) RETURNING id, content",
             content
         )
         .fetch_one(self)
+        .await?;
+
+        Ok(paste)
+    }
+
+    async fn remove(&self, id: Uuid) -> Result<Option<Paste>> {
+        let paste = sqlx::query_as!(
+            crate::paste::Paste,
+            "DELETE FROM pastes WHERE id = $1 RETURNING id, content",
+            id
+        )
+        .fetch_optional(self)
         .await?;
 
         Ok(paste)
