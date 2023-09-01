@@ -23,7 +23,7 @@ pub struct Paste {
 #[async_trait]
 pub trait PasteStore: Send + Sync {
     /// Get a paste by its ID.
-    async fn get_paste(&self, id: Uuid) -> Result<Paste>;
+    async fn get_paste(&self, id: Uuid) -> Result<Option<Paste>>;
 
     /// Create a new paste.
     async fn create_paste(&self, content: String) -> Result<Paste>;
@@ -31,13 +31,13 @@ pub trait PasteStore: Send + Sync {
 
 #[async_trait]
 impl PasteStore for PgPool {
-    async fn get_paste(&self, id: Uuid) -> Result<Paste> {
+    async fn get_paste(&self, id: Uuid) -> Result<Option<Paste>> {
         let paste = sqlx::query_as!(
             crate::paste::Paste,
             "SELECT id, content FROM pastes WHERE id = $1",
             id
         )
-        .fetch_one(self)
+        .fetch_optional(self)
         .await?;
 
         Ok(paste)

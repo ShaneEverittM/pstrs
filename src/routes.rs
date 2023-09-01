@@ -1,6 +1,6 @@
 use axum::{
     extract::{Host, Path, State},
-    http::Uri,
+    http::{StatusCode, Uri},
     routing::{get, post},
     Router,
 };
@@ -31,8 +31,15 @@ pub async fn index() -> &'static str { USAGE }
 pub async fn retrieve(
     Path(id): Path<Uuid>,
     State(state): State<App>,
-) -> Result<String> {
-    state.db.get_paste(id).await.map(|p| p.content)
+) -> Result<(StatusCode, String)> {
+    let paste = state.db.get_paste(id).await?;
+
+    let response = match paste {
+        Some(p) => (StatusCode::OK, p.content),
+        None => (StatusCode::NOT_FOUND, "Paste not found".to_string()),
+    };
+
+    Ok(response)
 }
 
 /// Upload a paste.
@@ -86,14 +93,10 @@ mod tests {
     // Implement our database trait on it.
     #[async_trait]
     impl PasteStore for MockPasteStore {
-        async fn get_paste(&self, id: Uuid) -> Result<Paste> {
+        async fn get_paste(&self, id: Uuid) -> Result<Option<Paste>> {
             let lock = self.entries.lock().await;
-            let paste = lock.get(&id).ok_or_else(|| anyhow::anyhow!("not found"))?;
-
-            Ok(Paste {
-                id,
-                content: paste.clone(),
-            })
+            let paste = lock.get(&id).map(|c| Paste::new(id, c.clone()));
+            Ok(paste)
         }
 
         async fn create_paste(&self, content: String) -> Result<Paste> {
@@ -111,6 +114,10 @@ mod tests {
                 db: MockPasteStore::arc(),
             }
         }
+    }
+
+    impl Paste {
+        pub fn new(id: Uuid, content: String) -> Self { Self { id, content } }
     }
 
     // Get a test client suitable for use within tests,
@@ -155,6 +162,18 @@ mod tests {
         let response = client.get(id).send().await;
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(response.text().await, paste);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_non_existent() -> Result<()> {
+        let client = get_client();
+
+        // Test that get fails the way we expect.
+        let id = Uuid::new_v4();
+        let response = client.get(&format!("/{}", id)).send().await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         Ok(())
     }
