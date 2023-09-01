@@ -1,7 +1,7 @@
 use axum::{
     extract::{Host, Path, State},
     http::{StatusCode, Uri},
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use uuid::Uuid;
@@ -32,11 +32,25 @@ pub async fn retrieve(
     Path(id): Path<Uuid>,
     State(state): State<App>,
 ) -> Result<(StatusCode, String)> {
-    let paste = state.db.get_paste(id).await?;
+    let paste = state.pastes.get(id).await?;
 
     let response = match paste {
         Some(p) => (StatusCode::OK, p.content),
         None => (StatusCode::NOT_FOUND, "Paste not found".to_string()),
+    };
+
+    Ok(response)
+}
+
+pub async fn remove(
+    Path(id): Path<Uuid>,
+    State(state): State<App>,
+) -> Result<(StatusCode, &'static str)> {
+    let paste = state.pastes.remove(id).await?;
+
+    let response = match paste {
+        Some(_) => (StatusCode::OK, "Deleted!"),
+        None => (StatusCode::NOT_FOUND, "Paste not found"),
     };
 
     Ok(response)
@@ -51,7 +65,7 @@ pub async fn upload(
     Host(host): Host,
     body: String,
 ) -> Result<String> {
-    let paste = state.db.create_paste(body).await?;
+    let paste = state.pastes.create(body).await?;
 
     // Construct a complete URI to the paste,
     // so the user can easily copy and save it.
@@ -65,6 +79,7 @@ pub fn make_router() -> Router<App> {
         .route("/", get(index))
         .route("/", post(upload))
         .route("/:id", get(retrieve))
+        .route("/:id", delete(remove))
 }
 
 #[cfg(test)]
@@ -93,17 +108,23 @@ mod tests {
     // Implement our database trait on it.
     #[async_trait]
     impl PasteStore for MockPasteStore {
-        async fn get_paste(&self, id: Uuid) -> Result<Option<Paste>> {
+        async fn get(&self, id: Uuid) -> Result<Option<Paste>> {
             let lock = self.entries.lock().await;
             let paste = lock.get(&id).map(|c| Paste::new(id, c.clone()));
             Ok(paste)
         }
 
-        async fn create_paste(&self, content: String) -> Result<Paste> {
+        async fn create(&self, content: String) -> Result<Paste> {
             let id = Uuid::new_v4();
             let mut lock = self.entries.lock().await;
             lock.insert(id, content.clone());
             Ok(Paste { id, content })
+        }
+
+        async fn remove(&self, id: Uuid) -> Result<Option<Paste>> {
+            let mut lock = self.entries.lock().await;
+            let paste = lock.remove(&id).map(|c| Paste::new(id, c));
+            Ok(paste)
         }
     }
 
@@ -111,7 +132,7 @@ mod tests {
     impl App {
         pub fn mock() -> Self {
             Self {
-                db: MockPasteStore::arc(),
+                pastes: MockPasteStore::arc(),
             }
         }
     }
@@ -173,6 +194,49 @@ mod tests {
         // Test that get fails the way we expect.
         let id = Uuid::new_v4();
         let response = client.get(&format!("/{}", id)).send().await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_delete() -> Result<()> {
+        let client = get_client();
+
+        // Create a paste to upload then retrieve.
+        let paste = "This is a paste!";
+
+        // Test that post succeeds.
+        let response = client.post("/").body(paste.to_string()).send().await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Get the paste id from the response.
+        let body = response.text().await;
+        let uri = body.parse::<Uri>()?;
+        let id = uri.path();
+
+        // Test that get succeeds.
+        let response = client.get(id).send().await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.text().await, paste);
+
+        let response = client.delete(id).send().await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Test that get fails the way we expect.
+        let response = client.get(id).send().await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_delete_non_existent() -> Result<()> {
+        let client = get_client();
+
+        // Test that get fails the way we expect.
+        let id = Uuid::new_v4();
+        let response = client.delete(&format!("/{}", id)).send().await;
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         Ok(())
