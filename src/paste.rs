@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::error::Result;
 
 /// A paste row in our database.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Paste {
     pub id: Uuid,
     pub content: String,

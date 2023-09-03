@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use sqlx::PgPool;
+use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
 
 use crate::paste::PasteStore;
 
@@ -15,6 +16,8 @@ use crate::paste::PasteStore;
 #[derive(Clone)]
 pub struct App {
     pub pastes: Arc<dyn PasteStore>,
+    pub syntax_set: Arc<SyntaxSet>,
+    pub theme_set: Arc<ThemeSet>,
 }
 
 impl App {
@@ -22,6 +25,8 @@ impl App {
     pub fn postgres(pool: PgPool) -> Self {
         Self {
             pastes: Arc::new(pool),
+            syntax_set: Arc::new(SyntaxSet::load_defaults_newlines()),
+            theme_set: Arc::new(ThemeSet::load_defaults()),
         }
     }
 }
