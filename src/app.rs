@@ -19,5 +19,9 @@ pub struct App {
 
 impl App {
     // Construct application state with a postgres connection pool.
-    pub fn postgres(pool: PgPool) -> Self { Self { pastes: Arc::new(pool) } }
+    pub fn postgres(pool: PgPool) -> Self {
+        Self {
+            pastes: Arc::new(pool),
+        }
+    }
 }

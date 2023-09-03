@@ -1,6 +1,6 @@
 use axum::{
     extract::{Host, Path, State},
-    http::{StatusCode, Uri},
+    http::StatusCode,
     routing::{delete, get, post},
     Router,
 };
@@ -56,6 +56,14 @@ pub async fn remove(
     Ok(response)
 }
 
+fn scheme(host: &str) -> &'static str {
+    if host.contains("127.0.0.1") || host.contains("localhost") {
+        "http"
+    } else {
+        "https"
+    }
+}
+
 /// Upload a paste.
 ///
 /// Extracts the host url, body of the request, and a database connection from
@@ -69,9 +77,7 @@ pub async fn upload(
 
     // Construct a complete URI to the paste,
     // so the user can easily copy and save it.
-    let paste_uri = format!("https://{}/{}", host, paste.id).parse::<Uri>()?;
-
-    Ok(paste_uri.to_string())
+    Ok(format!("{}://{}/{}", scheme(&host), host, paste.id))
 }
 
 pub fn make_router() -> Router<App> {
