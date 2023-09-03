@@ -4,6 +4,10 @@ use axum::{
     routing::{delete, get, post},
     Router,
 };
+use syntect::{
+    easy::HighlightLines,
+    util::{as_24_bit_terminal_escaped, LinesWithEndings},
+};
 use uuid::Uuid;
 
 use crate::{app::App, error::Result};
@@ -41,6 +45,38 @@ pub async fn retrieve(
 
     Ok(response)
 }
+
+pub async fn retrieve_and_syntax_highlight(
+    Path((id, lang)): Path<(Uuid, String)>,
+    State(state): State<App>,
+) -> Result<(StatusCode, String)> {
+    let paste = state.pastes.get(id).await?;
+    let syntax = state.syntax_set.find_syntax_by_extension(&lang);
+
+    let response = match paste {
+        Some(p) => match syntax {
+            Some(syntax) => {
+                let mut highlighter = HighlightLines::new(
+                    syntax,
+                    &state.theme_set.themes["base16-ocean.dark"],
+                );
+                let mut lines = Vec::new();
+                for line in LinesWithEndings::from(&p.content) {
+                    let ranges = highlighter.highlight_line(line, &state.syntax_set)?;
+                    let escaped = as_24_bit_terminal_escaped(&ranges[..], false);
+                    lines.push(escaped + "\x1b[0m");
+                }
+                (StatusCode::OK, lines.join(""))
+            }
+            None => (StatusCode::OK, p.content),
+        },
+        None => (StatusCode::NOT_FOUND, "Paste not found".to_string()),
+    };
+
+    Ok(response)
+}
+/// myapp.com/a/b
+/// myapp.com/a/b/c where c is optional but not not provided
 
 pub async fn remove(
     Path(id): Path<Uuid>,
@@ -85,6 +121,7 @@ pub fn make_router() -> Router<App> {
         .route("/", get(index))
         .route("/", post(upload))
         .route("/:id", get(retrieve))
+        .route("/:id/:lang", get(retrieve_and_syntax_highlight))
         .route("/:id", delete(remove))
 }
 
@@ -93,8 +130,9 @@ mod tests {
     use std::{collections::HashMap, sync::Arc};
 
     use async_trait::async_trait;
-    use axum::http::StatusCode;
+    use axum::http::{StatusCode, Uri};
     use axum_test_helper::TestClient;
+    use syntect::{highlighting::ThemeSet, parsing::SyntaxSet};
     use tokio::sync::Mutex;
 
     use super::*;
@@ -139,6 +177,8 @@ mod tests {
         pub fn mock() -> Self {
             Self {
                 pastes: MockPasteStore::arc(),
+                syntax_set: Arc::new(SyntaxSet::load_defaults_newlines()),
+                theme_set: Arc::new(ThemeSet::new()),
             }
         }
     }
