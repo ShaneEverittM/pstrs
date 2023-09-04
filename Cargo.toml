@@ -7,8 +7,10 @@ edition = "2021"
 anyhow = "1.0.74"
 async-trait = "0.1.73"
 axum = "0.6.18"
+easy-ext = "1.0.1"
 futures-util = "0.3.28"
 hyper = "0.14.27"
+lazy_static = "1.4.0"
 serde = "1.0.183"
 shuttle-axum = "0.25.0"
 shuttle-runtime = "0.25.0"
@@ -20,3 +22,4 @@ uuid = { version = "1.4.1", features = ["serde", "v4", "fast-rng"] }
 
 [dev-dependencies]
 axum-test-helper = "0.3.0"
+strip-ansi-escapes = "0.2.0"

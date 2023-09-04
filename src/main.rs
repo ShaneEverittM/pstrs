@@ -4,8 +4,11 @@ use sqlx::PgPool;
 
 mod app;
 mod error;
+mod ext;
 mod paste;
 mod routes;
+mod util;
+mod highlight;
 
 #[shuttle_runtime::main]
 async fn axum(#[Postgres] pool: PgPool) -> ShuttleAxum {

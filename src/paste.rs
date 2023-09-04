@@ -3,13 +3,24 @@ use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::error::Result;
+use crate::{error::Result, highlight::highlight};
 
 /// A paste row in our database.
 #[derive(Debug, Serialize)]
 pub struct Paste {
     pub id: Uuid,
     pub content: String,
+}
+
+impl Paste {
+    /// Apply syntax highlighting to a paste's content.
+    ///
+    /// Here `lang` is the extension code of the language to highlight the
+    /// content as. For example `rs` for Rust, `py` for Python, `js` for
+    /// JavaScript, etc.
+    pub fn to_highlighted(&self, syntax: &str, theme: &str) -> String {
+        highlight(&self.content, syntax, theme)
+    }
 }
 
 /// Trait for interacting with the paste database.
